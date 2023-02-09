@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
+	// "time"
 
 	"github.com/getlantern/systray"
 	"github.com/skratchdot/open-golang/open"
@@ -148,12 +148,17 @@ type Calendar struct {
 	events []EventAndTimes
 }
 
-func findNext(events []Calendar) *EventAndTimes {
-	var next *EventAndTimes
+func findNext(events []Calendar) EventAndTimes {
+	var next EventAndTimes
 	for _, cal := range events {
 		for _, event := range cal.events {
-			if next == nil || next.start.Gt(event.start) {
-				next = &event
+			if next.event == nil {
+				next = event
+			} else if next.start.Gt(event.start) {
+				fmt.Println("Ok better one", next.start.Format("H:i"), event.start.Format("H:i"))
+				next = event
+			} else if next.start.Eq(event.start) && next.event.HangoutLink == "" && event.event.HangoutLink != "" {
+				next = event
 			}
 		}
 	}
@@ -162,12 +167,18 @@ func findNext(events []Calendar) *EventAndTimes {
 
 func renderEvents(cals []Calendar) {
 	next := findNext(cals)
-	if next == nil {
+	if next.event == nil {
 		systray.SetTitle("No next event")
 	} else {
 		text := next.event.Summary
 		if len(text) > 30 {
 			text = text[:30] + "..."
+		}
+		mins := carbon.Now().DiffInMinutes(next.start)
+		if mins > 30 {
+			text += fmt.Sprintf(" at %s", next.start.Format("h:ia"))
+		} else {
+			text += fmt.Sprintf(" in %d min", mins)
 		}
 		systray.SetTitle(text)
 
@@ -225,94 +236,28 @@ func loadEvents(service *calendar.Service) []Calendar {
 					continue
 				}
 
+				going := true
+				for _, att := range event.Attendees {
+					if att.Self {
+						going = att.ResponseStatus != "declined"
+					}
+				}
+				if !going {
+					continue
+				}
+
+
+
 				eventsAndTimes = append(eventsAndTimes, EventAndTimes{event, start, end})
 			}
+		}
+		if len(eventsAndTimes) == 0 {
+			continue
 		}
 		cals = append(cals, Calendar{id: entry.Id, events: eventsAndTimes})
 	}
 
 	return cals
-}
-
-func loadEvents_(service *calendar.Service) {
-	list, err := service.CalendarList.List().Do()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var found *calendar.Event
-
-	for _, entry := range list.Items {
-		events, err := service.Events.List(entry.Id).
-			OrderBy("startTime").SingleEvents(true).
-			TimeMin(carbon.Now().StartOfDay().ToRfc3339String()).
-			TimeMax(carbon.Tomorrow().StartOfDay().ToRfc3339String()).Do()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if len(events.Items) == 0 {
-			continue
-		}
-
-		systray.AddMenuItem(entry.Id, "").Disable()
-
-		for _, event := range events.Items {
-			start := carbon.Parse(event.Start.DateTime)
-			end   := carbon.Parse(event.End.DateTime)
-
-			if end.Lt(carbon.Now().SubMinutes(30)) {
-				continue
-			}
-
-			text := event.Summary
-			if event.HangoutLink != "" {
-				text = "📹️ " + text
-			}
-
-			if found == nil {
-				found = event
-				title := text
-				now := carbon.Now()
-				if start.Gt(now) {
-					minutes := now.DiffInMinutes(start)
-					title += fmt.Sprintf(" in %d min", minutes)
-				}
-				systray.SetTitle(title)
-			}
-
-			text = start.Format("h:i") + "-" + end.Format("h:i") + " " + text
-			item := systray.AddMenuItem(text, event.Description)
-
-			go handleClick(event, item, entry.Id)
-		}
-	}
-	if found == nil {
-		return
-	}
-
-	for {
-		<-time.After(time.Second * 30)
-
-		start := carbon.Parse(found.Start.DateTime)
-		end   := carbon.Parse(found.End.DateTime)
-
-		if end.Lt(carbon.Now().SubMinutes(30)) {
-			return
-		}
-
-		text := found.Summary
-		if found.HangoutLink != "" {
-			text = "📹️ " + text
-		}
-
-		title := text
-		now := carbon.Now()
-		if start.Gt(now) {
-			minutes := now.DiffInMinutes(start)
-			title += fmt.Sprintf(" in %d min", minutes)
-		}
-		systray.SetTitle(title)
-	}
 }
 
 func handleClick(event *calendar.Event, item *systray.MenuItem, id string) {
