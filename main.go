@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	// "time"
+	"time"
 
 	"github.com/getlantern/systray"
 	"github.com/skratchdot/open-golang/open"
@@ -118,7 +118,7 @@ func onReady() {
 
 	fmt.Println("Ok loading")
 	if loadFromFile() {
-	fmt.Println("Ok loaded")
+		fmt.Println("Ok loaded")
 		mUrl.Hide()
 	}
 
@@ -149,9 +149,13 @@ type Calendar struct {
 }
 
 func findNext(events []Calendar) EventAndTimes {
+	now := carbon.Now()
 	var next EventAndTimes
 	for _, cal := range events {
 		for _, event := range cal.events {
+			if event.end.Lt(now) {
+				continue
+			}
 			if next.event == nil {
 				next = event
 			} else if next.start.Gt(event.start) {
@@ -165,7 +169,7 @@ func findNext(events []Calendar) EventAndTimes {
 	return next
 }
 
-func renderEvents(cals []Calendar) {
+func setTitle(cals []Calendar) {
 	next := findNext(cals)
 	if next.event == nil {
 		systray.SetTitle("No next event")
@@ -184,6 +188,9 @@ func renderEvents(cals []Calendar) {
 
 		fmt.Println("Event " + next.event.Summary)
 	}
+}
+
+func renderEvents(cals []Calendar) {
 	for _, cal := range cals {
 		systray.AddMenuItem(cal.id, "").Disable()
 
@@ -203,7 +210,21 @@ func renderEvents(cals []Calendar) {
 
 func runCalendar(service *calendar.Service) {
 	cals := loadEvents(service)
+	setTitle(cals)
 	renderEvents(cals)
+
+	start := carbon.Now()
+
+	for {
+		select {
+		case <-time.After(time.Second * 30):
+			setTitle(cals)
+			if carbon.Now().Gt(start.AddMinutes(15)) {
+				runCalendar(service)
+				return
+			}
+		}
+	}
 }
 
 func loadEvents(service *calendar.Service) []Calendar {
