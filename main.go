@@ -117,12 +117,12 @@ func runCalendar(service *calendar.Service, opened map[string]bool) {
 			setTitle(events)
 			renderEvents(events)
 			if carbon.Now().Gt(start.AddMinutes(15)) {
-				// systray.RemoveAllItems()
-				// mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-				// go func () {
-				// 	<-mQuit.ClickedCh
-				// 	os.Exit(0)
-				// }()
+				systray.RemoveAllItems()
+				mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+				go func () {
+					<-mQuit.ClickedCh
+					os.Exit(0)
+				}()
 				runCalendar(service, opened)
 				return
 			}
