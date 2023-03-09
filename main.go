@@ -88,8 +88,6 @@ func onReady() {
 
 	systray.AddSeparator()
 
-	renderCalendar()
-
 	opened := make(map[string]bool)
 
 	go func() {

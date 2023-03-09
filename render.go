@@ -22,21 +22,39 @@ func renderSquare(color color.Color) []byte {
 	return buf.Bytes()
 }
 
-func renderCalendar() {
-	m := image.NewRGBA(image.Rect(0, 0, 112, 80))
-	white := color.RGBA{255, 255, 255, 255}
-	draw.Draw(m, m.Bounds(), &image.Uniform{white}, image.ZP, draw.Src)
-	for i := 0; i < 80; i += 4 {
-		blue := color.RGBA{0, 0, 255, 255}
-		draw.Draw(m, image.Rect(0, i, 112, i+1), &image.Uniform{blue}, image.ZP, draw.Src)
-		green := color.RGBA{0, 255, 0, 255}
-		draw.Draw(m, image.Rect(0, i+2, 112, i+3), &image.Uniform{green}, image.ZP, draw.Src)
+func renderCalendarIcon(state State) {
+	height := 40
+	width := 80
+
+	m := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	sod := carbon.Now().SubHours(1)
+	eod := carbon.Now().AddHours(3)
+	// sod := carbon.Now().StartOfDay().SetHour(8)
+	// eod := carbon.Now().StartOfDay().SetHour(12 + 8)
+
+	blocksToday := (int(sod.DiffInMinutes(eod)) / 15)
+	pixelsPerBlock := width / blocksToday
+
+	calHeight := height / len(state.calendars)
+
+	for _, event := range state.events {
+		start := -int(event.start.DiffInMinutes(sod)) / 15 * pixelsPerBlock
+		end := -int(event.end.DiffInMinutes(sod)) / 15 * pixelsPerBlock
+
+		top := event.calIdx * calHeight
+		bottom := top + calHeight
+
+		draw.Draw(m, image.Rect( start, top, end, bottom), &image.Uniform{event.color}, image.ZP, draw.Src)
 	}
+
+	now := -int(carbon.Now().DiffInMinutes(sod)) / 15 * pixelsPerBlock
+	draw.Draw(m, image.Rect( now, 0, now + pixelsPerBlock / 2, height), &image.Uniform{color.RGBA{255,255,255,255}}, image.ZP, draw.Src)
 
 	buf := new(bytes.Buffer)
 	_ = png.Encode(buf, m)
 	image_bytes := buf.Bytes()
-	systray.SetIconWithSize(image_bytes, 112, 40)
+	systray.SetIconWithSize(image_bytes, width / 2, height / 2)
 }
 
 func findNext(state State) *EventAndTimes {
@@ -79,6 +97,8 @@ func setTitle(state State) {
 }
 
 func renderEvents(state State) {
+	renderCalendarIcon(state)
+
 	now := carbon.Now()
 	for _, cal := range state.calendars {
 		if cal.menuItem != nil {
