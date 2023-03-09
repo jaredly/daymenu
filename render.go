@@ -23,8 +23,11 @@ func renderSquare(color color.Color) []byte {
 }
 
 func renderCalendarIcon(state State) {
-	height := 40
-	width := 80
+	height := 60
+	width := 100
+
+	topMargin := 10
+	bottomMargin := 10
 
 	m := image.NewRGBA(image.Rect(0, 0, width, height))
 
@@ -36,20 +39,32 @@ func renderCalendarIcon(state State) {
 	blocksToday := (int(sod.DiffInMinutes(eod)) / 15)
 	pixelsPerBlock := width / blocksToday
 
-	calHeight := height / len(state.calendars)
+	calHeight := (height - topMargin - bottomMargin) / len(state.calendars)
+
+	tickColor := color.RGBA{100,100,100,255}
+	halfColor := color.RGBA{50,50,50,255}
+	tick := carbon.Now().StartOfDay()
+	for i := 0; i < 24; i++ {
+		at := tick.SetHour(i).SetMinute(0)
+		x := int(sod.DiffInMinutes(at)) / 15 * pixelsPerBlock
+		draw.Draw(m, image.Rect( x, 0, x + 2, topMargin / 2), &image.Uniform{tickColor}, image.ZP, draw.Src)
+		at = tick.SetHour(i).SetMinute(30)
+		x = int(sod.DiffInMinutes(at)) / 15 * pixelsPerBlock
+		draw.Draw(m, image.Rect( x, 0, x + 2, topMargin / 2), &image.Uniform{halfColor}, image.ZP, draw.Src)
+	}
 
 	for _, event := range state.events {
 		start := -int(event.start.DiffInMinutes(sod)) / 15 * pixelsPerBlock
 		end := -int(event.end.DiffInMinutes(sod)) / 15 * pixelsPerBlock
 
-		top := event.calIdx * calHeight
+		top := topMargin + event.calIdx * calHeight
 		bottom := top + calHeight
 
 		draw.Draw(m, image.Rect( start, top, end, bottom), &image.Uniform{event.color}, image.ZP, draw.Src)
 	}
 
 	now := -int(carbon.Now().DiffInMinutes(sod)) / 15 * pixelsPerBlock
-	draw.Draw(m, image.Rect( now, 0, now + pixelsPerBlock / 2, height), &image.Uniform{color.RGBA{255,255,255,255}}, image.ZP, draw.Src)
+	draw.Draw(m, image.Rect( now, topMargin, now + 1, height - bottomMargin), &image.Uniform{color.RGBA{255,255,255,255}}, image.ZP, draw.Src)
 
 	buf := new(bytes.Buffer)
 	_ = png.Encode(buf, m)

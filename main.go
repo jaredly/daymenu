@@ -119,7 +119,7 @@ func openIfNeeded(state State, opened map[string]bool) {
 		if !opened[event.event.Id] && event.event.HangoutLink != "" {
 			if event.start.Lte(now.AddMinutes(1)) && event.end.Gte(now) {
 				opened[event.event.Id] = true
-				openEvent(event.event, event.calId)
+				// openEvent(event.event, event.calId)
 			}
 		}
 	}
