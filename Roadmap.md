@@ -4,7 +4,7 @@
 - [x] I really want a little visualization... generate an image.
 
 Configuration items
-- [ ] max number of characters to preview (20/50/100)
+- [ ] max number of characters to preview (15/30/50)
 - [ ] enable/disable auto-open per-calendar
 - [ ] preview image (-1..3) (-2..2) (8am/8pm) (6am/10pm)
 - [ ] width of preview image
