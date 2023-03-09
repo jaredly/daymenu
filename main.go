@@ -1,20 +1,20 @@
 package main
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
-	"os"
 	"io/ioutil"
 	"log"
-	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/getlantern/systray"
+	"github.com/golang-module/carbon/v2"
 	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/oauth2"
-	"github.com/golang-module/carbon/v2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 )
@@ -25,9 +25,9 @@ var configBytes []byte
 func main() {
 	// fmt.Println("Main ok")
 
-	systray.Run(func () {
+	systray.Run(func() {
 		onReady()
-	}, func () {
+	}, func() {
 		// idk
 	})
 }
@@ -92,7 +92,7 @@ func onReady() {
 
 	opened := make(map[string]bool)
 
-	go func () {
+	go func() {
 		for {
 			select {
 			case <-mUrl.ClickedCh:
@@ -145,7 +145,7 @@ func runCalendar(service *calendar.Service, opened map[string]bool) {
 			if carbon.Now().Gt(start.AddMinutes(15)) {
 				systray.RemoveAllItems()
 				mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-				go func () {
+				go func() {
 					<-mQuit.ClickedCh
 					os.Exit(0)
 				}()

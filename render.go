@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"image"
-	"image/draw"
 	"image/color"
-	"bytes"
+	"image/draw"
 	"image/png"
 
 	"github.com/getlantern/systray"
@@ -26,11 +26,11 @@ func renderCalendar() {
 	m := image.NewRGBA(image.Rect(0, 0, 112, 80))
 	white := color.RGBA{255, 255, 255, 255}
 	draw.Draw(m, m.Bounds(), &image.Uniform{white}, image.ZP, draw.Src)
-	for i := 0; i < 80; i+=4 {
+	for i := 0; i < 80; i += 4 {
 		blue := color.RGBA{0, 0, 255, 255}
-		draw.Draw(m, image.Rect(0,i,112,i + 1), &image.Uniform{blue}, image.ZP, draw.Src)
+		draw.Draw(m, image.Rect(0, i, 112, i+1), &image.Uniform{blue}, image.ZP, draw.Src)
 		green := color.RGBA{0, 255, 0, 255}
-		draw.Draw(m, image.Rect(0,i + 2,112, i + 3), &image.Uniform{green}, image.ZP, draw.Src)
+		draw.Draw(m, image.Rect(0, i+2, 112, i+3), &image.Uniform{green}, image.ZP, draw.Src)
 	}
 
 	buf := new(bytes.Buffer)
@@ -38,7 +38,6 @@ func renderCalendar() {
 	image_bytes := buf.Bytes()
 	systray.SetIconWithSize(image_bytes, 112, 40)
 }
-
 
 func findNext(state State) *EventAndTimes {
 	now := carbon.Now()
