@@ -10,4 +10,4 @@ require (
 	google.golang.org/api v0.109.0 // indirect
 )
 
-replace github.com/getlantern/systray => ../
+replace github.com/getlantern/systray => ./systray

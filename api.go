@@ -16,6 +16,7 @@ import (
 	"github.com/golang-module/carbon/v2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
+	"image/color"
 )
 
 /*
@@ -35,27 +36,63 @@ type EventAndTimes struct {
 	start carbon.Carbon
 	end carbon.Carbon
 	menuItem *systray.MenuItem
+	color color.Color
 	calId string
+	icon []byte
 }
 
 type Events []*EventAndTimes
+
+type CalItem struct {
+	id string
+	title string
+	menuItem *systray.MenuItem
+	color color.Color
+	icon []byte
+	// color string
+}
+
+type State struct {
+	calendars []*CalItem
+	events Events
+}
 
 func (s Events) Len() int      { return len(s) }
 func (s Events) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s Events) Less(i, j int) bool { return s[i].start.Lt(s[j].start) }
 
-func loadEvents(service *calendar.Service) Events {
+func parseHexColor(s string) (c color.RGBA, err error) {
+    c.A = 0xff
+    switch len(s) {
+    case 7:
+        _, err = fmt.Sscanf(s, "#%02x%02x%02x", &c.R, &c.G, &c.B)
+    case 4:
+        _, err = fmt.Sscanf(s, "#%1x%1x%1x", &c.R, &c.G, &c.B)
+        // Double the hex digits:
+        c.R *= 17
+        c.G *= 17
+        c.B *= 17
+    default:
+        err = fmt.Errorf("invalid length, must be 7 or 4")
+
+    }
+    return
+}
+
+func loadEvents(service *calendar.Service) State {
 	list, err := service.CalendarList.List().Do()
 	if err != nil {
+		fmt.Println("hi")
 		log.Fatal(err)
 	}
 
-	allEvents := Events{}
+	state := State{}
 
 	for _, entry := range list.Items {
-		if entry.Id == "selinadforsyth@gmail.com" {
+		if entry.Hidden || !entry.Selected {
 			continue
 		}
+
 		events, err := service.Events.List(entry.Id).
 			OrderBy("startTime").SingleEvents(true).
 			TimeMin(carbon.Now().StartOfDay().ToRfc3339String()).
@@ -66,6 +103,15 @@ func loadEvents(service *calendar.Service) Events {
 		if len(events.Items) == 0 {
 			continue
 		}
+
+		color, err := parseHexColor(entry.BackgroundColor)
+		icon := renderSquare(color)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cal := CalItem{entry.Id, entry.Summary, nil, color, icon}
+		state.calendars = append(state.calendars, &cal)
 
 		for _, event := range events.Items {
 			if event.Start.DateTime != "" && event.End.DateTime != "" {
@@ -82,14 +128,14 @@ func loadEvents(service *calendar.Service) Events {
 					continue
 				}
 
-				allEvents = append(allEvents, &EventAndTimes{event, start, end, nil, entry.Id})
+				state.events = append(state.events, &EventAndTimes{event, start, end, nil, color, entry.Id, icon})
 			}
 		}
 	}
 
-	sort.Sort(allEvents)
+	sort.Sort(state.events)
 
-	return allEvents
+	return state
 }
 
 func getConfig() *oauth2.Config {
@@ -97,6 +143,7 @@ func getConfig() *oauth2.Config {
 		"https://www.googleapis.com/auth/calendar.readonly")
 	config.RedirectURL = "http://localhost:5221"
 	if err != nil {
+		fmt.Println("hon")
 		log.Fatal(err)
 	}
 	return config
@@ -121,15 +168,13 @@ func authCalendar(cb func(*calendar.Service, map[string]bool), opened map[string
 		// Handle the exchange code to initiate a transport.
 		token, err := conf.Exchange(oauth2.NoContext, code)
 		if err != nil {
+		fmt.Println("hot")
 			log.Fatal(err)
 		}
-		text, err := json.Marshal(token)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ioutil.WriteFile(tokenFile(), text, 0644)
+		saveToken(token)
 		calendarService, err := calendar.NewService(ctx, option.WithTokenSource(conf.TokenSource(ctx, token)))
 		if err != nil {
+		fmt.Println("nnhote")
 			log.Fatal(err)
 		}
 
@@ -144,4 +189,12 @@ func authCalendar(cb func(*calendar.Service, map[string]bool), opened map[string
 	server.Addr = "localhost:5221"
 	server.ListenAndServe()
 
+}
+
+func saveToken(token *oauth2.Token) {
+	text, err := json.Marshal(token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ioutil.WriteFile(tokenFile(), text, 0644)
 }

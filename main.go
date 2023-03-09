@@ -41,9 +41,18 @@ func loadFromFile(opened map[string]bool) bool {
 			log.Fatal(err)
 		}
 
-		conf := getConfig()
 		ctx := context.Background()
-		calendarService, err := calendar.NewService(ctx, option.WithTokenSource(conf.TokenSource(ctx, &token)))
+		conf := getConfig()
+
+		tokenSource := conf.TokenSource(ctx, &token)
+		_ = oauth2.NewClient(ctx, tokenSource)
+		savedToken, err := tokenSource.Token()
+		if err != nil {
+			return false
+		}
+		saveToken(savedToken)
+
+		calendarService, err := calendar.NewService(ctx, option.WithTokenSource(tokenSource))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -54,6 +63,21 @@ func loadFromFile(opened map[string]bool) bool {
 	return false
 }
 
+/*
+ok, so we have 40 vertical pixels
+WOW ok 80 vertical pixels, if I really want to push it.
+
+a single vertical line can indicate where we are
+we can do an 8am to 10pm or something?
+
+that's ... 14 hours. with 15-minute increments, that's 56 pixels
+where 1 pixel is 15 minutes.
+It'd be nice to have 2 pixels per 15 minutes. So I can do 112 pixels wide, that's
+not terrible.
+
+OR should we just do "the next 4 hours"?
+*/
+
 func onReady() {
 	systray.SetTitle("Loading...")
 
@@ -63,6 +87,8 @@ func onReady() {
 	mUrl.Hide()
 
 	systray.AddSeparator()
+
+	renderCalendar()
 
 	opened := make(map[string]bool)
 
@@ -89,9 +115,9 @@ func onReady() {
 
 }
 
-func openIfNeeded(events Events, opened map[string]bool) {
+func openIfNeeded(state State, opened map[string]bool) {
 	now := carbon.Now()
-	for _, event := range events {
+	for _, event := range state.events {
 		if !opened[event.event.Id] && event.event.HangoutLink != "" {
 			if event.start.Lte(now.AddMinutes(1)) && event.end.Gte(now) {
 				opened[event.event.Id] = true
@@ -102,20 +128,20 @@ func openIfNeeded(events Events, opened map[string]bool) {
 }
 
 func runCalendar(service *calendar.Service, opened map[string]bool) {
-	events := loadEvents(service)
-	setTitle(events)
-	renderEvents(events)
+	state := loadEvents(service)
+	setTitle(state)
+	renderEvents(state)
 
 	start := carbon.Now()
 
-	openIfNeeded(events, opened)
+	openIfNeeded(state, opened)
 
 	for {
 		select {
 		case <-time.After(time.Second * 30):
-			openIfNeeded(events, opened)
-			setTitle(events)
-			renderEvents(events)
+			openIfNeeded(state, opened)
+			setTitle(state)
+			renderEvents(state)
 			if carbon.Now().Gt(start.AddMinutes(15)) {
 				systray.RemoveAllItems()
 				mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
