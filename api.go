@@ -83,7 +83,7 @@ func loadEvents(service *calendar.Service) State {
 	list, err := service.CalendarList.List().Do()
 	if err != nil {
 		fmt.Println("hi")
-		log.Fatal(err)
+		return nil
 	}
 
 	state := State{}
@@ -98,7 +98,7 @@ func loadEvents(service *calendar.Service) State {
 			TimeMin(carbon.Now().StartOfDay().ToRfc3339String()).
 			TimeMax(carbon.Tomorrow().StartOfDay().ToRfc3339String()).Do()
 		if err != nil {
-			log.Fatal(err)
+			return nil
 		}
 		if len(events.Items) == 0 {
 			continue

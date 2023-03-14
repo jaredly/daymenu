@@ -127,6 +127,15 @@ func openIfNeeded(state State, opened map[string]bool) {
 
 func runCalendar(service *calendar.Service, opened map[string]bool) {
 	state := loadEvents(service)
+	if state == nil {
+		for {
+			<-time.After(time.Second * 120):
+			state = runCalendar(service, opened)
+			if state != nil {
+				break
+			}
+		}
+	}
 	setTitle(state)
 	renderEvents(state)
 

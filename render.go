@@ -126,13 +126,13 @@ func renderEvents(state State) {
 	systray.AddSeparator()
 
 	for _, event := range state.events {
-		if event.end.Lt(now.SubMinutes(30)) {
-			if event.menuItem != nil {
-				event.menuItem.Remove()
-				event.menuItem = nil
-			}
-			continue
-		}
+		// if event.end.Lt(now.SubMinutes(30)) {
+		// 	if event.menuItem != nil {
+		// 		event.menuItem.Remove()
+		// 		event.menuItem = nil
+		// 	}
+		// 	continue
+		// }
 
 		text := event.event.Summary
 		if event.event.HangoutLink != "" {
