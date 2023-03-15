@@ -80,13 +80,14 @@ func parseHexColor(s string) (c color.RGBA, err error) {
 }
 
 func loadEvents(service *calendar.Service) State {
+	state := State{}
+
 	list, err := service.CalendarList.List().Do()
 	if err != nil {
 		fmt.Println("hi")
-		return nil
+		return state
 	}
 
-	state := State{}
 
 	for _, entry := range list.Items {
 		if entry.Hidden || !entry.Selected {
@@ -98,7 +99,7 @@ func loadEvents(service *calendar.Service) State {
 			TimeMin(carbon.Now().StartOfDay().ToRfc3339String()).
 			TimeMax(carbon.Tomorrow().StartOfDay().ToRfc3339String()).Do()
 		if err != nil {
-			return nil
+			return state
 		}
 		if len(events.Items) == 0 {
 			continue

@@ -127,11 +127,12 @@ func openIfNeeded(state State, opened map[string]bool) {
 
 func runCalendar(service *calendar.Service, opened map[string]bool) {
 	state := loadEvents(service)
-	if state == nil {
+	if len(state.calendars) == 0 {
+		fmt.Println("No calendars, will try again in a few minutes")
 		for {
-			<-time.After(time.Second * 120):
-			state = runCalendar(service, opened)
-			if state != nil {
+			<-time.After(time.Second * 120)
+			state = loadEvents(service)
+			if len(state.calendars) != 0 {
 				break
 			}
 		}
