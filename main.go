@@ -48,7 +48,15 @@ func loadFromFile(opened map[string]bool) bool {
 		_ = oauth2.NewClient(ctx, tokenSource)
 		savedToken, err := tokenSource.Token()
 		if err != nil {
-			return false
+			updatedToken, err := conf.TokenSource(context.TODO(), &token).Token()
+			if err != nil {
+				log.Print("Failed to update", err)
+				log.Print("The refreshes: one ", token.RefreshToken)
+				return false
+			}
+			savedToken = updatedToken
+			tokenSource = conf.TokenSource(ctx, updatedToken)
+			_ = oauth2.NewClient(ctx, tokenSource)
 		}
 		saveToken(savedToken)
 
