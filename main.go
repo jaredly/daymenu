@@ -19,6 +19,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+var Version string
+
 //go:embed client-config.json
 var configBytes []byte
 
@@ -48,15 +50,15 @@ func loadFromFile(opened map[string]bool) bool {
 		_ = oauth2.NewClient(ctx, tokenSource)
 		savedToken, err := tokenSource.Token()
 		if err != nil {
-			updatedToken, err := conf.TokenSource(context.TODO(), &token).Token()
-			if err != nil {
-				log.Print("Failed to update", err)
-				log.Print("The refreshes: one ", token.RefreshToken)
-				return false
-			}
-			savedToken = updatedToken
-			tokenSource = conf.TokenSource(ctx, updatedToken)
-			_ = oauth2.NewClient(ctx, tokenSource)
+			// updatedToken, err := conf.TokenSource(ctx, &token).Token()
+			// if err != nil {
+			log.Print("Failed to update", err)
+			// log.Print("The refreshes: one ", token.RefreshToken)
+			return false
+			// }
+			// savedToken = updatedToken
+			// tokenSource = conf.TokenSource(ctx, updatedToken)
+			// _ = oauth2.NewClient(ctx, tokenSource)
 		}
 		saveToken(savedToken)
 
@@ -90,6 +92,10 @@ func onReady() {
 	systray.SetTitle("Loading...")
 
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+	if Version == "" {
+		Version = "no build version"
+	}
+	systray.AddMenuItem(fmt.Sprintf("Menunder version %s", Version), "Version info").Disable()
 	mRefresh := systray.AddMenuItem("Refresh", "Refresh the things")
 	mUrl := systray.AddMenuItem("Authorize with Google Calendar", "my home")
 	mUrl.Hide()

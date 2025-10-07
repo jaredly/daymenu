@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"sort"
 
+	"image/color"
+
 	"github.com/getlantern/systray"
 	"github.com/golang-module/carbon/v2"
 	"github.com/skratchdot/open-golang/open"
@@ -16,7 +18,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
-	"image/color"
 )
 
 /*
@@ -87,7 +88,6 @@ func loadEvents(service *calendar.Service) State {
 		fmt.Println("hi")
 		return state
 	}
-
 
 	for _, entry := range list.Items {
 		if entry.Hidden || !entry.Selected {
@@ -162,7 +162,7 @@ func authCalendar(cb func(*calendar.Service, map[string]bool), opened map[string
 	// Redirect user to Google's consent page to ask for permission
 	// for the scopes specified above.
 	conf := getConfig()
-	open.Run(conf.AuthCodeURL("state"))
+	open.Run(conf.AuthCodeURL("state", oauth2.AccessTypeOffline))
 
 	var server http.Server
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +185,10 @@ func authCalendar(cb func(*calendar.Service, map[string]bool), opened map[string
 		cb(calendarService, opened)
 
 		fmt.Printf("Ok here we go\n")
+
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("<html><title>Connection successful</title><body style='padding: 50px'><h1>Successfully connected to your calendars! You can now close this window.</h1>"))
 
 		server.Close()
 	})
