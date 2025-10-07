@@ -97,7 +97,7 @@ func onReady() {
 	}
 	systray.AddMenuItem(fmt.Sprintf("Menunder version %s", Version), "Version info").Disable()
 	mRefresh := systray.AddMenuItem("Refresh", "Refresh the things")
-	mUrl := systray.AddMenuItem("Authorize with Google Calendar", "my home")
+	mUrl := systray.AddMenuItem("Authorize with Google Calendar", "Open the Google Calendar authorization page")
 	mUrl.Hide()
 
 	systray.AddSeparator()
@@ -124,7 +124,6 @@ func onReady() {
 		mUrl.Show()
 		systray.SetTitle("Please authorize?")
 	}
-
 }
 
 func openIfNeeded(state State, opened map[string]bool) {

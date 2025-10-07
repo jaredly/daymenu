@@ -167,30 +167,37 @@ func authCalendar(cb func(*calendar.Service, map[string]bool), opened map[string
 	var server http.Server
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
-		fmt.Printf("Welcome to new server! %s\n", code)
+		if code == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<html><title>Connection successful</title><body style='padding: 50px'><h1>Successfully connected to your calendars! You can now close this window.</h1>"))
 
 		// Handle the exchange code to initiate a transport.
 		token, err := conf.Exchange(oauth2.NoContext, code)
 		if err != nil {
-			fmt.Println("hot")
+			fmt.Println("Bad exchange")
 			log.Fatal(err)
 		}
 		saveToken(token)
+
 		calendarService, err := calendar.NewService(ctx, option.WithTokenSource(conf.TokenSource(ctx, token)))
 		if err != nil {
-			fmt.Println("nnhote")
+			fmt.Println("Failed to create calendar service")
 			log.Fatal(err)
 		}
 
-		cb(calendarService, opened)
+		go func() {
+			server.Shutdown(context.Background())
+		}()
 
-		fmt.Printf("Ok here we go\n")
+		fmt.Println("Successfully authenticated")
 
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("<html><title>Connection successful</title><body style='padding: 50px'><h1>Successfully connected to your calendars! You can now close this window.</h1>"))
-
-		server.Close()
+		go func() {
+			cb(calendarService, opened)
+		}()
 	})
 
 	// listen to port
